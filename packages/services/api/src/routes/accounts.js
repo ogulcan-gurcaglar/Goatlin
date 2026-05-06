@@ -71,4 +71,27 @@ router.get('/accounts/:username/notes', auth, async (req, res, next) => {
     }
 });
 
+router.get('/accounts/:username/notes/search', auth, async (req, res, next) => {
+    try {
+        const query = {
+            owner: req.params.username,
+            title: req.query.title,
+            content: req.query.content
+        };
+
+        const notes = await Note.find(query, null, {lean: true}).exec();
+
+        res.status(200).json(notes).end();
+    } catch (e) {
+        let status = 500;
+        let error = e.message;
+
+        console.error(e);
+
+        res.status(status).json({error});
+    } finally {
+        res.end();
+    }
+});
+
 module.exports = router;
