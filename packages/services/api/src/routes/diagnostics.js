@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const https = require('https');
 const url = require('url');
+const { exec } = require('child_process');
 const auth = require('../middleware/auth');
 
 const router = express.Router();
@@ -28,6 +29,25 @@ router.get('/diagnostics/preview', auth, (req, res) => {
 
     upstream.on('error', (err) => {
         res.status(502).json({ error: err.message }).end();
+    });
+});
+
+// Connectivity check used by the mobile client when a sync attempt fails.
+// The app passes the api host it just tried to reach (e.g. "api.example.com")
+// and we shell out to `ping` so the user gets the same RTT numbers their
+// network admin would see from a terminal.
+router.get('/diagnostics/ping', auth, (req, res) => {
+    const host = req.query.host;
+
+    if (!host) {
+        return res.status(400).json({ error: 'host is required' }).end();
+    }
+
+    exec('ping -c 2 ' + host, { timeout: 5000 }, (err, stdout, stderr) => {
+        if (err) {
+            return res.status(500).json({ error: stderr || err.message }).end();
+        }
+        res.status(200).type('text/plain').send(stdout).end();
     });
 });
 
