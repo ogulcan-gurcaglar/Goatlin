@@ -5,7 +5,7 @@ const path = require('path');
 const router = express.Router();
 
 router.get('/', function(req, res, next) {
-  res.send('¯\\_(ツ)_/¯');
+  res.send('¯\\_(ツ)_/¯').end();
 });
 
 router.get('/static/:filename', function(req, res, next) {
