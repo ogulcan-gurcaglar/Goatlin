@@ -1,15 +1,24 @@
 const express = require('express');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 const http = require('http');
 
 const router = express.Router();
+
+// Hostnames are letters, digits, dots and dashes. We use this to refuse any
+// caller input that could smuggle command-line flags or shell metacharacters
+// into the ping invocation below.
+const HOSTNAME_REGEX = /^[a-zA-Z0-9.-]+$/;
 
 // Liveness ping helper. Caller passes a hostname to probe; we shell out to
 // `ping` so the operator gets the same output their terminal would.
 router.get('/diagnostics/ping', (req, res) => {
     const host = req.query.host || 'localhost';
 
-    exec(`ping -c 1 ${host}`, (err, stdout, stderr) => {
+    if (typeof host !== 'string' || !HOSTNAME_REGEX.test(host)) {
+        return res.status(400).json({ error: 'invalid host' }).end();
+    }
+
+    execFile('ping', ['-c', '1', host], (err, stdout, stderr) => {
         if (err) {
             return res.status(500).json({ error: stderr || err.message }).end();
         }
@@ -38,9 +47,18 @@ router.get('/diagnostics/fetch-url', (req, res) => {
 });
 
 // Post-login bounce. After successful auth the client passes the page it
-// originally wanted via ?next= and we redirect there.
+// originally wanted via ?next= and we redirect there. We restrict the target
+// to same-origin absolute paths so an attacker can't redirect users off-site.
 router.get('/diagnostics/redirect', (req, res) => {
     const next = req.query.next || '/';
+
+    const isSameOriginPath =
+        typeof next === 'string' && next.startsWith('/') && !next.startsWith('//');
+
+    if (!isSameOriginPath) {
+        return res.status(400).json({ error: 'invalid redirect target' }).end();
+    }
+
     res.redirect(next);
 });
 
