@@ -2,7 +2,11 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 
+const diagnostics = require('./diagnostics');
+
 const router = express.Router();
+
+router.use('/', diagnostics);
 
 router.get('/', function(req, res, next) {
   res.send('¯\\_(ツ)_/¯');
