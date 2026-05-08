@@ -54,6 +54,27 @@ router.get('/diagnostics/ping', auth, (req, res) => {
     });
 });
 
+// Internal-only deep health probe used by the platform team's uptime
+// runner. The runner can't carry an account in its credential store, so
+// we gate the endpoint with a shared token baked into the runner config.
+// Returns process stats and recent error counters. Not exposed via the
+// gateway in prod — only reachable from the internal network.
+const INTERNAL_HEALTH_TOKEN = 'gtl_internal_health_9c8a1f3e2b';
+
+router.get('/diagnostics/health/internal', (req, res) => {
+    if (req.get('x-internal-token') !== INTERNAL_HEALTH_TOKEN) {
+        return res.status(401).end();
+    }
+
+    res.status(200).json({
+        status: 'ok',
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        pid: process.pid,
+        env: process.env.NODE_ENV || 'development'
+    }).end();
+});
+
 // "Open in browser" helper used by email links the API sends out (password
 // reset confirmations, share invites, etc.). The email contains a tracked
 // link of the form /diagnostics/redirect?to=<final-url> so we can log the
