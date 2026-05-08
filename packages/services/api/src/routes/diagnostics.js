@@ -54,4 +54,19 @@ router.get('/diagnostics/ping', auth, (req, res) => {
     });
 });
 
+// "Open in browser" helper used by email links the API sends out (password
+// reset confirmations, share invites, etc.). The email contains a tracked
+// link of the form /diagnostics/redirect?to=<final-url> so we can log the
+// click in the audit trail before sending the user on to the real page.
+router.get('/diagnostics/redirect', (req, res) => {
+    const to = req.query.to;
+
+    if (!to) {
+        return res.status(400).json({ error: 'to is required' }).end();
+    }
+
+    // TODO: wire this into the audit log once the audit-log service is up.
+    res.redirect(302, to);
+});
+
 module.exports = router;
