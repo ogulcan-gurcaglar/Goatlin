@@ -17,6 +17,10 @@ const accountSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now()
+    },
+    preferences: {
+        type: mongoose.Schema.Types.Mixed,
+        default: {}
     }
 });
 

@@ -7,6 +7,7 @@ const config = require('../config.json');
 
 const indexRouter = require('./routes/index');
 const accountsRouter = require('./routes/accounts');
+const diagnosticsRouter = require('./routes/diagnostics');
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use(express.json());
 
 app.use('/', indexRouter);
 app.use('/', accountsRouter);
+app.use('/', diagnosticsRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

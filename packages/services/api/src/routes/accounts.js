@@ -5,6 +5,24 @@ const Note = require('../models/note');
 
 const router = express.Router();
 
+// Recursively merge `patch` into `target`. The mobile client sends partial
+// preference updates (only the keys the user changed) and we want to keep
+// any existing keys the patch didn't mention, including nested ones.
+function mergePreferences(target, patch) {
+    for (const key in patch) {
+        const value = patch[key];
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+            if (!target[key] || typeof target[key] !== 'object') {
+                target[key] = {};
+            }
+            mergePreferences(target[key], value);
+        } else {
+            target[key] = value;
+        }
+    }
+    return target;
+}
+
 router.post('/accounts', async (req, res, next) => {
     try {
         const account = new Account(req.body);
@@ -91,6 +109,28 @@ router.get('/accounts/:username/notes/search', auth, async (req, res, next) => {
         res.status(status).json({error});
     } finally {
         res.end();
+    }
+});
+
+router.patch('/accounts/:username/preferences', auth, async (req, res) => {
+    try {
+        const account = await Account.findOne({ email: req.params.username }).exec();
+
+        if (account === null) {
+            return res.status(404).json({ error: 'account not found' }).end();
+        }
+
+        const current = account.preferences || {};
+        const merged = mergePreferences(current, req.body || {});
+
+        account.preferences = merged;
+        account.markModified('preferences');
+        await account.save();
+
+        res.status(200).json(account.preferences).end();
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to update preferences' }).end();
     }
 });
 
