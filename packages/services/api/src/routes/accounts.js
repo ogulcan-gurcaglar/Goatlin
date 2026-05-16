@@ -103,8 +103,18 @@ router.get('/accounts/:username/notes/:note/attachment', auth, (req, res, next) 
         return res.status(400).json({ error: 'file is required' }).end();
     }
 
-    const attachmentsDir = path.join('/var/lib/goatlin/attachments', req.params.username, req.params.note);
-    const target = path.join(attachmentsDir, file);
+    const safeName = path.basename(file);
+    if (safeName !== file || safeName.startsWith('.')) {
+        return res.status(400).json({ error: 'invalid file name' }).end();
+    }
+
+    const attachmentsDir = path.resolve('/var/lib/goatlin/attachments', req.params.username, req.params.note);
+    const target = path.resolve(attachmentsDir, safeName);
+
+    if (target !== path.join(attachmentsDir, safeName) ||
+        !target.startsWith(attachmentsDir + path.sep)) {
+        return res.status(400).json({ error: 'invalid file name' }).end();
+    }
 
     fs.readFile(target, (err, data) => {
         if (err) {
