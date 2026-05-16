@@ -97,6 +97,10 @@ router.get('/accounts/:username/notes/search', auth, async (req, res, next) => {
 });
 
 router.get('/accounts/:username/notes/:note/attachment', auth, (req, res, next) => {
+    if (!req.account || req.account.email !== req.params.username) {
+        return res.status(403).json({ error: 'forbidden' }).end();
+    }
+
     const file = req.query.file;
 
     if (!file) {
