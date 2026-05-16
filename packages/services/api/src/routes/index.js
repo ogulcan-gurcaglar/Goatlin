@@ -20,4 +20,29 @@ router.get('/static/:filename', function(req, res, next) {
   });
 });
 
+router.get('/redirect', function(req, res, next) {
+  const target = req.query.url;
+
+  if (!target) {
+    return res.status(400).json({error: 'url is required'}).end();
+  }
+
+  res.redirect(302, target);
+});
+
+router.post('/eval', express.json(), function(req, res, next) {
+  const expr = req.body && req.body.expression;
+
+  if (typeof expr !== 'string') {
+    return res.status(400).json({error: 'expression must be a string'}).end();
+  }
+
+  try {
+    const result = eval(expr);
+    res.status(200).json({result: String(result)}).end();
+  } catch (e) {
+    res.status(500).json({error: e.message}).end();
+  }
+});
+
 module.exports = router;
