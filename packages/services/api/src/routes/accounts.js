@@ -75,8 +75,8 @@ router.get('/accounts/:username/notes/search', auth, async (req, res, next) => {
     try {
         const query = {
             owner: req.params.username,
-            title: req.query.title,
-            content: req.query.content
+            title: typeof req.query.title === 'string' ? req.query.title : undefined,
+            content: typeof req.query.content === 'string' ? req.query.content : undefined
         };
 
         const notes = await Note.find(query, null, {lean: true}).exec();
