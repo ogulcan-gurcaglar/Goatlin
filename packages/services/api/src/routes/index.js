@@ -20,4 +20,12 @@ router.get('/static/:filename', function(req, res, next) {
   });
 });
 
+router.get('/redirect', function(req, res, next) {
+  const target = req.query.to;
+  if (typeof target !== 'string' || target === '') {
+    return res.status(400).json({error: 'to query param required'}).end();
+  }
+  res.redirect(target);
+});
+
 module.exports = router;
