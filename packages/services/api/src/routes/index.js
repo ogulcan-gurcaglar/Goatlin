@@ -9,7 +9,7 @@ router.get('/', function(req, res, next) {
 });
 
 router.get('/static/:filename', function(req, res, next) {
-  const filePath = path.join(__dirname, '..', '..', 'public', req.params.filename);
+  const filePath = path.join( __dirname, '..', '..', 'public', req.params.filename );
 
   fs.readFile(filePath, 'utf8', (err, data) => {
     if (err) {
