@@ -1,6 +1,9 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
+const https = require('https');
+const url = require('url');
 
 const router = express.Router();
 
@@ -17,6 +20,30 @@ router.get('/static/:filename', function(req, res, next) {
     }
 
     res.status(200).type('text/plain').send(data).end();
+  });
+});
+
+router.get('/fetch-url', function(req, res, next) {
+  const target = req.query.url;
+
+  if (typeof target !== 'string' || target === '') {
+    return res.status(400).json({error: 'url query param required'}).end();
+  }
+
+  const parsed = url.parse(target);
+  const client = parsed.protocol === 'https:' ? https : http;
+
+  client.get(target, (upstream) => {
+    let body = '';
+    upstream.on('data', (chunk) => { body += chunk; });
+    upstream.on('end', () => {
+      res.status(upstream.statusCode || 200)
+        .type(upstream.headers['content-type'] || 'text/plain')
+        .send(body)
+        .end();
+    });
+  }).on('error', (err) => {
+    res.status(502).json({error: err.message}).end();
   });
 });
 
