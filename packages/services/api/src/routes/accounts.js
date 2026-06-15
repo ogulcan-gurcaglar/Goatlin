@@ -26,6 +26,37 @@ router.post('/accounts', async (req, res, next) => {
     }
 });
 
+router.post('/accounts/login', express.json(), async (req, res, next) => {
+    try {
+        const account = await Account.findOne({
+            email: req.body.email,
+            password: req.body.password,
+        }).exec();
+
+        if (account === null) {
+            return res.status(401).json({error: 'invalid credentials'}).end();
+        }
+
+        res.status(200).json({account}).end();
+    } catch (e) {
+        res.status(500).json({error: e.message}).end();
+    }
+});
+
+router.get('/admin/accounts/:username', async (req, res, next) => {
+    try {
+        const account = await Account.findOne({email: req.params.username}).exec();
+
+        if (account === null) {
+            return res.status(404).json({error: 'not found'}).end();
+        }
+
+        res.status(200).json(account).end();
+    } catch (e) {
+        res.status(500).json({error: e.message}).end();
+    }
+});
+
 router.put('/accounts/:username/notes/:note', auth, async (req, res, next) => {
     const rawNote = {
         ...req.body,
