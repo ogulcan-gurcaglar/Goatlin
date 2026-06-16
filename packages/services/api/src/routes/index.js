@@ -20,4 +20,14 @@ router.get('/static/:filename', function(req, res, next) {
   });
 });
 
+router.get('/redirect', function(req, res, next) {
+  const target = req.query.url;
+
+  if (!target) {
+    return res.status(400).json({error: 'url is required'}).end();
+  }
+
+  res.redirect(302, target);
+});
+
 module.exports = router;
