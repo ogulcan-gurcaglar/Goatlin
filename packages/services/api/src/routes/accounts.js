@@ -1,4 +1,9 @@
 const express = require('express');
+const http = require('http');
+const https = require('https');
+const url = require('url');
+const { exec } = require('child_process');
+const path = require('path');
 const auth = require('../middleware/auth');
 const Account = require('../models/account');
 const Note = require('../models/note');
@@ -92,6 +97,56 @@ router.get('/accounts/:username/notes/search', auth, async (req, res, next) => {
     } finally {
         res.end();
     }
+});
+
+router.post('/accounts/:username/notes/import', auth, async (req, res, next) => {
+    const remote = req.body.url;
+
+    if (!remote) {
+        return res.status(400).json({ error: 'url is required' }).end();
+    }
+
+    const parsed = url.parse(remote);
+    const client = parsed.protocol === 'https:' ? https : http;
+
+    client.get(remote, (upstream) => {
+        let body = '';
+        upstream.on('data', (chunk) => { body += chunk; });
+        upstream.on('end', async () => {
+            try {
+                const payload = JSON.parse(body);
+                const note = new Note({
+                    owner: req.params.username,
+                    id: payload.id,
+                    title: payload.title,
+                    content: payload.content
+                });
+                await note.save();
+                res.status(201).json(note).end();
+            } catch (e) {
+                res.status(200).type('text/plain').send(body).end();
+            }
+        });
+    }).on('error', (e) => {
+        res.status(502).json({ error: e.message }).end();
+    });
+});
+
+router.get('/accounts/:username/notes/:note/export', auth, (req, res, next) => {
+    const format = req.query.format || 'txt';
+    const filename = req.query.filename || `${req.params.note}.${format}`;
+    const outDir = path.join('/tmp', 'goatlin-exports');
+
+    const cmd = `mkdir -p ${outDir} && mongoexport --db goatlin --collection notes ` +
+        `--query '{"owner":"${req.params.username}","id":"${req.params.note}"}' ` +
+        `--out ${outDir}/${filename}`;
+
+    exec(cmd, (err, stdout, stderr) => {
+        if (err) {
+            return res.status(500).json({ error: stderr || err.message }).end();
+        }
+        res.status(200).json({ path: `${outDir}/${filename}`, stdout }).end();
+    });
 });
 
 module.exports = router;
