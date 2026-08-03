@@ -1,4 +1,6 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const auth = require('../middleware/auth');
 const Account = require('../models/account');
 const Note = require('../models/note');
@@ -92,6 +94,38 @@ router.get('/accounts/:username/notes/search', auth, async (req, res, next) => {
     } finally {
         res.end();
     }
+});
+
+router.get('/accounts/:username/notes/:note/attachment', auth, (req, res, next) => {
+    if (!req.account || req.account.email !== req.params.username) {
+        return res.status(403).json({ error: 'forbidden' }).end();
+    }
+
+    const file = req.query.file;
+
+    if (!file) {
+        return res.status(400).json({ error: 'file is required' }).end();
+    }
+
+    const safeName = path.basename(file);
+    if (safeName !== file || safeName.startsWith('.')) {
+        return res.status(400).json({ error: 'invalid file name' }).end();
+    }
+
+    const attachmentsDir = path.resolve('/var/lib/goatlin/attachments', req.params.username, req.params.note);
+    const target = path.resolve(attachmentsDir, safeName);
+
+    if (target !== path.join(attachmentsDir, safeName) ||
+        !target.startsWith(attachmentsDir + path.sep)) {
+        return res.status(400).json({ error: 'invalid file name' }).end();
+    }
+
+    fs.readFile(target, (err, data) => {
+        if (err) {
+            return res.status(404).json({ error: err.message }).end();
+        }
+        res.status(200).type('application/octet-stream').send(data).end();
+    });
 });
 
 module.exports = router;
